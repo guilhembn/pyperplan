@@ -556,6 +556,7 @@ def parse_formula(iter):
 
     Returns the position after the formula and the Formula instance
     """
+    print("Parsing formula: {}".format(iter))
     if iter.is_structure():
         # this is a nested formula
         type = TypeFormula
@@ -583,8 +584,8 @@ def _parse_precondition_or_effect(iter, keyword, type):
     Returns a PreconditionStmt or EffectStmt instance.
     """
     if not iter.try_match(keyword):
-        raise ValueError('Error: %s must start with "%s" keyword' %
-                         (type.__name__, keyword))
+        raise ValueError('Error: %s must start with "%s" keyword\nIter : "%s"' %
+                         (type.__name__, keyword, iter))
     cond = parse_formula(next(iter))
     return type(cond)
 
@@ -609,6 +610,7 @@ def parse_action_stmt(iter):
         raise ValueError('Error: action must start with ":action" keyword!')
     name = parse_name(iter, 'action')
     # call parsers to parse parameters, precondition, effect
+    print ("Parsing action : ", name)
     param = parse_parameters(iter)
     pre = parse_precondition_stmt(iter)
     eff = parse_effect_stmt(iter)

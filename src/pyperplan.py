@@ -38,6 +38,8 @@ import search
 import heuristics
 import tools
 
+from search.model_reconciliation import mce
+
 SEARCHES = {
     'astar': search.astar_search,
     'wastar': search.weighted_astar_search,
@@ -173,6 +175,8 @@ def search_plan(domain_file, problem_file, search, heuristic_class,
     heuristic = None
     if not heuristic_class is None:
         heuristic = heuristic_class(task)
+    print(task)
+    print(task.get_meta_task(task))
     search_start_time = time.clock()
     if use_preferred_ops and isinstance(heuristic, heuristics.hFFHeuristic):
         solution = _search(task, search, heuristic, use_preferred_ops=True)
@@ -180,7 +184,29 @@ def search_plan(domain_file, problem_file, search, heuristic_class,
         solution = _search(task, search, heuristic)
     logging.info('Wall-clock search time: {0:.2}'.format(time.clock() -
                                                          search_start_time))
+    print(type(solution[0]))
     return solution
+
+def search_explanation(domain1_file, problem1_file, domain2_file, problem2_file, search, heuristic_class):
+    problem1 = _parse(domain1_file, problem1_file)
+    robot_task = _ground(problem1)
+    problem2 = _parse(domain2_file, problem2_file)
+    human_task = _ground(problem2)
+    heuristic = None
+    if not heuristic_class is None:
+        heuristic = heuristic_class(robot_task)
+    if use_preferred_ops and isinstance(heuristic, heuristics.hFFHeuristic):
+        p_r = _search(robot_task, search, heuristic, use_preferred_ops=True)
+    else:
+        p_r = _search(robot_task, search, heuristic)
+
+    explanation = mce.mce_search(search, heuristic, p_r, robot_task, human_task)
+
+    return explanation
+
+
+
+
 
 
 def validate_solution(domain_file, problem_file, solution_file):
@@ -222,6 +248,9 @@ if __name__ == '__main__':
     argparser.add_argument('-s', '--search', choices=SEARCHES.keys(),
         help='Select a search algorithm from {0}'.format(search_names),
         default='bfs')
+    argparser.add_argument('-e', '--explanations', choices=["MME"])
+    argparser.add_argument('-d2', '--domain2')
+    argparser.add_argument('-p2', '--problem2')
     args = argparser.parse_args()
 
     logging.basicConfig(level=getattr(logging, args.loglevel.upper()),
@@ -251,13 +280,24 @@ if __name__ == '__main__':
     logging.info('using heuristic: %s' % (heuristic.__name__ if heuristic
                                           else None))
     use_preferred_ops = (args.heuristic == 'hffpo')
-    solution = search_plan(args.domain, args.problem, search, heuristic,
-                           use_preferred_ops=use_preferred_ops)
 
-    if solution is None:
-        logging.warning('No solution could be found')
+    if args.explanations is None:
+        solution = search_plan(args.domain, args.problem, search, heuristic,
+                               use_preferred_ops=use_preferred_ops)
+
+        if solution is None:
+            logging.warning('No solution could be found')
+        else:
+            solution_file = args.problem + '.soln'
+            logging.info('Plan length: %s' % len(solution))
+            _write_solution(solution, solution_file)
+            validate_solution(args.domain, args.problem, solution_file)
     else:
-        solution_file = args.problem + '.soln'
-        logging.info('Plan length: %s' % len(solution))
-        _write_solution(solution, solution_file)
-        validate_solution(args.domain, args.problem, solution_file)
+        if args.domain2 is None or args.problem2 is None:
+            print("Error: arguments 'domain2' and 'problem2' required when requesting explanations")
+            exit(2)
+        else:
+            solution, explanation = search_explanation(args.domain, args.problem, args.domain2, args.problem2, search, heuristic)
+            print(solution)
+            print("\n\n########\nExplanation:", explanation)
+

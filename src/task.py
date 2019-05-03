@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
+import re
 
 """
 Classes for representing a STRIPS planning task
@@ -78,6 +79,8 @@ class Task:
     """
     A STRIPS planning task
     """
+    DEFAULT_NAME = 0
+
     def __init__(self, name, facts, initial_state, goals, operators):
         """
         @param name The task's name
@@ -119,3 +122,87 @@ class Task:
     def __repr__(self):
         string = '<Task {0}, vars: {1}, operators: {2}>'
         return string.format(self.name, len(self.facts), len(self.operators))
+
+    def get_meta_task(self, other):
+        facts = set()
+        for f in self.facts | other.facts:
+            facts.add("init-has-{}".format(f))
+            facts.add("goal-has-{}".format(f))
+            for a in self.operators + other.operators:
+                facts.add("{}-has-precondition-{}".format(a.name, f))
+                facts.add("{}-has-add-effect-{}".format(a.name, f))
+                facts.add("{}-has-del-effect-{}".format(a.name, f))
+        init_state = self.get_gamma()
+        goal_state = other.get_gamma()
+        return Task("meta-{}-to-{}".format(self.name, other.name), facts, init_state, goal_state, frozenset())
+
+    def get_gamma(self):
+        gamma = set()
+        used_facts = self.initial_state | self.goals
+        for a in self.operators:
+            used_facts |= a.preconditions | a.add_effects | a.del_effects
+        for f in used_facts:
+            gamma = gamma | self.tau(f)
+        return frozenset(gamma)
+
+    def tau(self, fact):
+        s = set()
+        if fact in self.initial_state:
+            s.add("init-has-{}".format(fact))
+        if fact in self.goals:
+            s.add("goal-has-{}".format(fact))
+        for a in self.operators:
+            if fact in a.preconditions:
+                s.add("{}-has-precondition-{}".format(a.name, fact))
+            if fact in a.add_effects:
+                s.add("{}-has-add-effect-{}".format(a.name, fact))
+            if fact in a.del_effects:
+                s.add("{}-has-del-effect-{}".format(a.name, fact))
+        return frozenset(s)
+
+    @staticmethod
+    def from_gamma(meta_facts):
+        facts = set()
+        initial_state = set()
+        goal_state = set()
+        operators = {} # name: ({preconds}, {add_effects}, {del_effects]})
+        for f in meta_facts:
+            init = re.search("init-has-(.*)", f)
+            if init:
+                facts.add(init.group(1))
+                initial_state.add(init.group(1))
+                continue
+            goal = re.search("goal-has-(.*)", f)
+            if goal:
+                facts.add(goal.group(1))
+                goal_state.add(goal.group(1))
+                continue
+            precond = re.search("(.*)-has-precondition-(.*)", f)
+            if precond:
+                facts.add(precond.group(2))
+                if precond.group(1) not in operators:
+                    operators[precond.group(1)] = (set(), set(), set())
+                operators[precond.group(1)][0].add(precond.group(2))
+                continue
+            add_eff = re.search("(.*)-has-add-effect-(.*)", f)
+            if add_eff:
+                facts.add(add_eff.group(2))
+                if add_eff.group(1) not in operators:
+                    operators[add_eff.group(1)] = (set(), set(), set())
+                operators[add_eff.group(1)][1].add(add_eff.group(2))
+                continue
+            del_eff = re.search("(.*)-has-del-effect-(.*)", f)
+            if del_eff:
+                facts.add(del_eff.group(2))
+                if del_eff.group(1) not in operators:
+                    operators[del_eff.group(1)] = (set(), set(), set())
+                operators[del_eff.group(1)][2].add(del_eff.group(2))
+                continue
+            print("Warning when generating task from gamma, unknown fact: '{}'".format(f))
+        op = [Operator(k, v[0], v[1], v[2]) for k, v in operators.items()]
+        Task.DEFAULT_NAME += 1
+        return Task(Task.DEFAULT_NAME, facts, frozenset(initial_state), frozenset(goal_state), op)
+
+
+
+
