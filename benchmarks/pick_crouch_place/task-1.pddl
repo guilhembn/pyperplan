@@ -1,0 +1,6 @@
+(define (problem ppc-1-2)
+(:domain PICKCROUCHPLACE)
+(:objects b1 - block p1 p2 - place)
+(:INIT (block-at b1 p1) (robot-at p1) (hand-empty))
+(:goal (and (block-at b1 p2)))
+)
