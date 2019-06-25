@@ -99,10 +99,24 @@ def ground(problem):
         logging.debug("Initial state without statics:\n%s" % init)
 
     # perform relevance analysis
-    operators = _relevance_analysis(operators, goals)
+    operators = _relevance_analysis2(operators, goals)
 
     name = problem.name
     return Task(name, facts, init, goals, operators)
+
+def _relevance_analysis2(operators, goals):
+    """
+    Just remove operators that have the same del and add effects (when grounding "move p1 p1" can happen
+    :param operators:
+    :param goals:
+    :return:
+    """
+    del_operator = set()
+    for op in operators:
+        if op.del_effects == op.add_effects:
+            del_operator.add(op)
+    return [op for op in operators if not op in del_operator]
+
 
 
 def _relevance_analysis(operators, goals):
