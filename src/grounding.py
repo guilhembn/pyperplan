@@ -332,6 +332,7 @@ def _create_operator(action, assignment, statics, init):
     @param assignment: mapping from predicate name to object name
     """
     precondition_facts = set()
+    possible_precondition_facts = set()
     for precondition in action.precondition:
         fact = _ground_atom(precondition, assignment)
         predicate_name = precondition.name
@@ -344,8 +345,19 @@ def _create_operator(action, assignment, statics, init):
             # This precondition is not always true -> Add it
             precondition_facts.add(fact)
 
+    for poss_pre in action.possible_precondition:
+        fact = _ground_atom(poss_pre, assignment)
+        predicate_name = poss_pre.name
+        if predicate_name in statics:
+            if fact not in init:
+                return None
+        else:
+            possible_precondition_facts.add(fact)
+
     add_effects = _ground_atoms(action.effect.addlist, assignment)
     del_effects = _ground_atoms(action.effect.dellist, assignment)
+    possible_add_effects = _ground_atoms(action.possible_effect.addlist, assignment)
+    possible_del_effects = _ground_atoms(action.possible_effect.dellist, assignment)
     # If the same fact is added and deleted by an operator the STRIPS formalism
     # adds it.
     del_effects -= add_effects
@@ -355,7 +367,8 @@ def _create_operator(action, assignment, statics, init):
     add_effects -= precondition_facts
     args = [assignment[name] for name, types in action.signature]
     name = _get_grounded_string(action.name, args)
-    return Operator(name, precondition_facts, add_effects, del_effects)
+    return Operator(name, precondition_facts, add_effects, del_effects, possible_precondition_facts,
+                    possible_add_effects, possible_del_effects)
 
 
 def _get_grounded_string(name, args):

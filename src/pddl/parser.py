@@ -195,7 +195,7 @@ class Formula(Visitable):
 class ActionStmt(Visitable):
     """This class represents the AST node for a pddl action."""
 
-    def __init__(self, name, parameters, precond, effect):
+    def __init__(self, name, parameters, precond, effect, possible_precond, possible_effect):
         """ Construct a new Action.
 
         Keyword arguments:
@@ -211,6 +211,8 @@ class ActionStmt(Visitable):
         # right now also a Formula << EffectStmt
         # --> should be checked when traversing the tree
         self.effect = effect
+        self.possible_precond = possible_precond
+        self.possible_effect = possible_effect
 
 
 class PredicatesStmt(Visitable):
@@ -594,8 +596,24 @@ def parse_precondition_stmt(it):
     return _parse_precondition_or_effect(it, ':precondition', PreconditionStmt)
 
 
+def parse_poss_precond_stmt(it):
+    try:
+        precond = _parse_precondition_or_effect(it, ':possible-precondition', PreconditionStmt)
+    except ValueError as e:
+        precond = PreconditionStmt(Formula("and"))
+    return precond
+
+
 def parse_effect_stmt(it):
     return _parse_precondition_or_effect(it, ':effect', EffectStmt)
+
+
+def parse_poss_effect_stmt(it):
+    try:
+        effect = _parse_precondition_or_effect(it, ':possible-effect', EffectStmt)
+    except ValueError as e:
+        effect = EffectStmt(Formula("and"))
+    return effect
 
 
 def parse_action_stmt(iter):
@@ -614,7 +632,9 @@ def parse_action_stmt(iter):
     param = parse_parameters(iter)
     pre = parse_precondition_stmt(iter)
     eff = parse_effect_stmt(iter)
-    return ActionStmt(name, param, pre, eff)
+    poss_pre = parse_poss_precond_stmt(iter)
+    poss_eff = parse_poss_effect_stmt(iter)
+    return ActionStmt(name, param, pre, eff, poss_pre, poss_eff)
 
 
 def parse_predicates_stmt(iter):

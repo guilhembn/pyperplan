@@ -28,11 +28,15 @@ class Operator:
     add_effects are the facts that the operator makes true.
     delete_effects are the facts that the operator makes false.
     """
-    def __init__(self, name, preconditions, add_effects, del_effects):
+    def __init__(self, name, preconditions, add_effects, del_effects, possible_preconditions, possible_add,
+                 possible_del=[]):
         self.name = name
         self.preconditions = frozenset(preconditions)
         self.add_effects = frozenset(add_effects)
         self.del_effects = frozenset(del_effects)
+        self.possible_preconditions = frozenset(possible_preconditions)
+        self.possible_add = frozenset(possible_add)
+        self.possible_del = frozenset(possible_del)
 
     def applicable(self, state):
         """
@@ -66,7 +70,10 @@ class Operator:
         s = '%s\n' % self.name
         for group, facts in [('PRE', self.preconditions),
                              ('ADD', self.add_effects),
-                             ('DEL', self.del_effects)]:
+                             ('DEL', self.del_effects),
+                             ('PRE~', self.possible_preconditions),
+                             ('ADD~', self.possible_add),
+                             ('DEL~', self.possible_del)]:
             for fact in facts:
                 s += '  %s: %s\n' % (group, fact)
         return s
@@ -117,7 +124,7 @@ class Task:
         s = 'Task {0}\n  Vars:  {1}\n  Init:  {2}\n  Goals: {3}\n  Ops:   {4}'
         return s.format(self.name, ', '.join(self.facts),
                              self.initial_state, self.goals,
-                             '\n'.join(map(repr, self.operators)))
+                             '\n'.join(map(str, self.operators)))
 
     def __repr__(self):
         string = '<Task {0}, vars: {1}, operators: {2}>'

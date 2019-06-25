@@ -326,8 +326,16 @@ class TraversePDDLDomain(PDDLVisitor):
         node.effect.accept(self)
         effect = self.get_in(node.effect)
 
+        # Visit the possible precondition statement.
+        node.possible_precond.accept(self)
+        poss_precond = self.get_in(node.possible_precond)
+
+        # Visit the possible effect statement.
+        node.possible_effect.accept(self)
+        poss_effect = self.get_in(node.possible_effect)
+
         # Create new PDDL action and store in node.
-        self.set_in(node, pddl.Action(node.name, signature, precond, effect))
+        self.set_in(node, pddl.Action(node.name, signature, precond, effect, poss_precond, poss_effect))
 
     def add_precond(self, precond, c):
         """Helper function for visit_precondition_stmt.

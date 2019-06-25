@@ -1,0 +1,7 @@
+(tuck)
+(crouch)
+(move p2 p1)
+(pick-up b1 p1)
+(tuck)
+(move p1 p2)
+(put-down b1 p2)
