@@ -51,3 +51,6 @@ class PrioQueue:
             c, m = random.choice(pruned_list)
             self._l.remove((c, m))
             return m, c
+
+    def __len__(self):
+        return len(self._l)

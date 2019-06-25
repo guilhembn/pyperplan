@@ -25,7 +25,6 @@ import re
 import logging
 import subprocess
 import time
-from operator import attrgetter
 
 try:
     import argparse
@@ -38,7 +37,7 @@ import search
 import heuristics
 import tools
 
-from search.model_reconciliation import mce
+from search.model_reconciliation import mce, mme
 
 SEARCHES = {
     'astar': search.astar_search,
@@ -52,6 +51,11 @@ SEARCHES = {
 
 
 NUMBER = re.compile(r'\d+')
+
+MRP = {
+    'MME': mme.mme_search,
+    'MCE': mce.mce_search
+}
 
 
 def get_heuristics():
@@ -187,7 +191,7 @@ def search_plan(domain_file, problem_file, search, heuristic_class,
     print(type(solution[0]))
     return solution
 
-def search_explanation(domain1_file, problem1_file, domain2_file, problem2_file, search, heuristic_class):
+def search_explanation(domain1_file, problem1_file, domain2_file, problem2_file, search, heuristic_class, model_reconcilition):
     problem1 = _parse(domain1_file, problem1_file)
     robot_task = _ground(problem1)
     problem2 = _parse(domain2_file, problem2_file)
@@ -200,7 +204,7 @@ def search_explanation(domain1_file, problem1_file, domain2_file, problem2_file,
     else:
         p_r = _search(robot_task, search, heuristic)
 
-    explanation = mce.mce_search(search, heuristic, p_r, robot_task, human_task)
+    explanation = model_reconcilition(search, heuristic, p_r, robot_task, human_task)
 
     return explanation
 
@@ -248,7 +252,7 @@ if __name__ == '__main__':
     argparser.add_argument('-s', '--search', choices=SEARCHES.keys(),
         help='Select a search algorithm from {0}'.format(search_names),
         default='bfs')
-    argparser.add_argument('-e', '--explanations', choices=["MME"])
+    argparser.add_argument('-e', '--explanations', choices=["MME", "MCE"])
     argparser.add_argument('-d2', '--domain2')
     argparser.add_argument('-p2', '--problem2')
     args = argparser.parse_args()
@@ -297,7 +301,8 @@ if __name__ == '__main__':
             print("Error: arguments 'domain2' and 'problem2' required when requesting explanations")
             exit(2)
         else:
-            solution, explanation = search_explanation(args.domain, args.problem, args.domain2, args.problem2, search, heuristic)
-            print(solution)
+            model_reconciliation = MRP[args.explanations]
+            solution, explanation = search_explanation(args.domain, args.problem, args.domain2, args.problem2, search, heuristic, model_reconciliation)
+            print("Solution :", solution)
             print("\n\n########\nExplanation:", explanation)
 

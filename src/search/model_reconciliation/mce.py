@@ -1,13 +1,6 @@
 from .prio_queue import PrioQueue
 from task import Task, Operator
-
-
-def search_plan(task, search, heuristic):
-    if heuristic:
-        return search(task, heuristic)
-    else:
-        return search(task)
-
+from .utils import search_plan
 
 def is_plan_optimal(explained_plan, m: Task, optimal_plan_in_m):
     # TODO: Check for optimality (here we just check for feasability)
@@ -57,7 +50,7 @@ def mce_search(search, heuristic, explained_plan, m_r: Task, m_h: Task):
                 new_gamma = lamb.apply(m_hat.get_gamma())
                 if new_gamma not in c_list:
                     fringe.push((Task.from_gamma(new_gamma), eps + [lamb]), c+1)
-                    print(Task.from_gamma(new_gamma))
+                    #print(Task.from_gamma(new_gamma))
                 else:
                     print("In c_list !")
 
